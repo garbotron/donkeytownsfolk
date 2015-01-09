@@ -1,0 +1,62 @@
+{{template "header.template" $}}
+
+<div class="row">
+  <div class="column">
+    <table class="ui unstackable compact blue table">
+      <thead>
+        <tr>
+          <th>Deck</th>
+          <th>User</th>
+          <th>Creation Date</th>
+          <th>Price Limit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+
+      {{range $deck := $.Decks}}
+        <tr>
+          <td><strong><a href="/deck?user={{$deck.User.NormalizedName}}&amp;name={{$deck.Deck.NormalizedName}}">{{$deck.Deck.Name}}</a></strong></td>
+          <td><a href="/?user={{$deck.User.NormalizedName}}">{{$deck.User.Name}}</a></td>
+          <td>{{$deck.Deck.PrettyCreationDate}}</td>
+          <td><a href="/?price={{$deck.Deck.PriceLimit.SimpleString}}">{{$deck.Deck.PriceLimit.String}}</a></td>
+          {{with $deck.Deck.CurrentPriceSnapshot}}
+          <td class="{{if $deck.Deck.IsLegal}}positive{{else}}negative{{end}}">
+            {{if $deck.Deck.IsLegal}}
+              <i class="checkmark icon"></i>
+            {{else}}
+              <i class="ban icon"></i>
+            {{end}}
+            {{.TotalPrice.String}} as of {{.PrettyDate}}
+          </td>
+          {{else}}
+          <td>not saved</td>
+          {{end}}
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="column">
+    <div class="ui three column grid">
+      <div class="ui left aligned column">
+      {{if $.PrevPageIndex}}
+        <a href="/?{{$.QueryWithoutPage}}{{if $.QueryWithoutPage}}&amp;{{end}}page={{$.PrevPageIndex}}"><strong>&lt;&lt; previous</strong></a>
+      {{end}}
+      </div>
+      <div class="ui center aligned column">
+        <strong>{{$.CurrentDeckRange}}</strong>
+      </div>
+      <div class="ui right aligned column">
+      {{if $.NextPageIndex}}
+        <a href="/?{{$.QueryWithoutPage}}{{if $.QueryWithoutPage}}&amp;{{end}}page={{$.NextPageIndex}}"><strong>next &gt;&gt;</strong></a>
+      {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+
+{{template "footer.template" $}}

@@ -1,0 +1,23 @@
+html, body {
+  font-size: 15px;
+}
+
+body {
+  font-family: "Open Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  text-rendering: optimizeLegibility;
+  padding: 2em;
+}
+
+h2.ui.banner {
+  color: #444;
+  margin-bottom: 0;
+}
+
+h2.ui.banner > a {
+  color: #444;
+}
+
+h3.ui.sub-banner {
+  color: #666;
+  margin-top: 0;
+}
