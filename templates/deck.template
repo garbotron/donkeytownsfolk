@@ -5,6 +5,10 @@
     <h1 class="ui top attached header">
       {{$.Deck.Deck.Name}}
       {{if $.IsLoggedInUser}}
+      <a id="delete-deck-link" class="ui red right floated compact button">
+        <i class="delete icon"></i>
+        Delete Deck
+      </a>
       <a id="modify-deck-link" class="ui right floated compact button">
         <i class="settings icon"></i>
         Change Deck Info
@@ -23,7 +27,7 @@
     <h3 class="ui bottom attached {{if $.Deck.Deck.IsLegal}}green{{else}}red{{end}} header">
       <i class="{{if $.Deck.Deck.IsLegal}}checkmark{{else}}ban{{end}} icon"></i>
       <div class="content">
-        This Deck is {{if $.Deck.Deck.IsLegal}}Legal{{else}}Illegal{{end}}
+        This Deck is {{if $.Deck.Deck.IsLegal}}Legal{{if $.Deck.Deck.IsGrandfatherLegal}} (grandfathered in){{end}}{{else}}Illegal{{end}}
         <div class="sub header">{{.TotalPrice.String}} as of {{.PrettyDate}}</div>
       </div>
     </h3>
@@ -44,7 +48,7 @@
     <div class="ui bottom attached active tab segment" data-tab="decklist">
       {{with $.Deck.Deck.StagingArea}}
       <h3 class="ui {{if $.Deck.Deck.IsStagingAreaLegal}}green{{else}}red{{end}} block header">
-        Current Price: {{.TotalPrice.String}}
+        Current Price: {{.TotalPrice.String}}{{if .IsGrandfatherLegal}} (grandfathered in){{end}}
       </h3>
       {{if $.Deck.Deck.IsSaved}}
       <h2 class="ui green header">Decklist ({{.TotalDecklistCount}} cards) [Saved]
@@ -75,23 +79,39 @@
         <div class="ui equal height grid">
           <div class="row">
             <div class="eleven wide column">
-              <div class="ui list">
-                {{if .Commander.IsPresent}}
-                <div class="item">
-                  <div class="right floated">{{.Commander.Price.String}}</div>
-                  <div class="content"><div class="header">Commander: <a class="card-deck-entry" href="http://magiccards.info/query?q=%21{{.Commander.Name}}&amp;v=card&amp;s=cname">{{.Commander.Name}}</a></div></div>
-                </div>
-                {{end}}
-                {{range $entry := .Decklist}}
-                <div class="item">
-                  <div class="right floated">{{$entry.Count}}x {{$entry.PricePer.String}} = {{$entry.TotalPrice.String}}</div>
-                  <div class="content">{{$entry.Count}} <a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname" class="card-deck-entry">{{$entry.Name}}</a></div>
-                </div>
-                {{end}}
-              </div>
+
+              <table class="ui very compact sortable deck table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th class="collapsing">Price Each</th>
+                    <th class="collapsing">Total Price</th>
+                  </tr>
+                  {{if .Commander.IsPresent}}
+                  <tr class="card-deck-entry">
+                    <td></td>
+                    <td><strong>Commander: <a class="card-deck-entry" href="http://magiccards.info/query?q=%21{{.Commander.Name}}&amp;v=card&amp;s=cname">{{.Commander.Name}}</a></strong></td>
+                    <td class="collapsing">{{.Commander.Price.String}}</td>
+                    <td class="collapsing">{{.Commander.Price.String}}</td>
+                  </tr>
+                  {{end}}
+                </thead>
+                <tbody>
+                  {{range $entry := .Decklist}}
+                  <tr class="card-deck-entry">
+                    <td class="collapsing">{{$entry.Count}}</td>
+                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a></td>
+                    <td class="collapsing">{{$entry.PricePer.String}}</td>
+                    <td class="collapsing">{{$entry.TotalPrice.String}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+
             </div>
             <div class="five wide column">
-              <img id="img-card-deck" class="ui centered image" src="http://gatherer.wizards.com/Handlers/Image.ashx?type=card&amp;name=invalid">
+              <img id="img-card-deck" class="ui centered image" style="width:200px" src="http://gatherer.wizards.com/Handlers/Image.ashx?type=card&amp;name=invalid">
             </div>
           </div>
         </div>
@@ -107,14 +127,28 @@
         <div class="ui equal height grid">
           <div class="row">
             <div class="eleven wide column">
-              <div class="ui list">
-                {{range $entry := .Sideboard}}
-                <div class="item">
-                  <div class="right floated">{{$entry.Count}}x {{$entry.PricePer.String}} = {{$entry.TotalPrice.String}}</div>
-                  <div class="content">{{$entry.Count}} <a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname" class="card-sb-entry">{{$entry.Name}}</a></div>
-                </div>
-                {{end}}
-              </div>
+            
+              <table class="ui very compact sortable deck table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th class="collapsing">Price Each</th>
+                    <th class="collapsing">Total Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range $entry := .Sideboard}}
+                  <tr class="card-sb-entry">
+                    <td class="collapsing">{{$entry.Count}}</td>
+                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a></td>
+                    <td class="collapsing">{{$entry.PricePer.String}}</td>
+                    <td class="collapsing">{{$entry.TotalPrice.String}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+
             </div>
             <div class="five wide column">
               <img id="img-card-sb" class="ui centered image" src="http://gatherer.wizards.com/Handlers/Image.ashx?type=card&amp;name=invalid">
@@ -123,7 +157,6 @@
         </div>
       </div>
       {{end}}
-      <p><em>Price data provided by <a href="http://magic.tcgplayer.com/">tcgplayer</a> (average prices)</em></p>
       {{end}}
     </div>
     <div class="ui bottom attached tab segment" data-tab="history">
@@ -162,8 +195,14 @@
   </div>
 </div>
 
+<script type="text/javascript" src="/static/jquery.tablesort.js"></script>
 <script type="text/javascript">
 $(function() {
+  $('.sortable.table').tablesort();
+  $('.sortable.table').data('tablesort').sort($('.sortable.table th:nth-child(2)'), 'asc');
+
+  $('#delete-deck-link').click(function() { $('#delete-deck').modal('show'); return false; });
+
   $('#modify-deck').form({
     
     name: {
@@ -212,16 +251,16 @@ $(function() {
 
   $('#clear-history-link').click(function() { $('#clear-history').modal('show'); return false; });
 
-  $('a.card-deck-entry').mousemove(function(e) {
+  $('.card-deck-entry').mousemove(function(e) {
     $('#img-card-deck').attr(
       'src',
-      'http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=' + encodeURIComponent($(this).text()));
+      'http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=' + encodeURIComponent($(this).find('a').text()));
   });
 
-  $('a.card-sb-entry').mousemove(function(e) {
+  $('.card-sb-entry').mousemove(function(e) {
     $('#img-card-sb').attr(
       'src',
-      'http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=' + encodeURIComponent($(this).text()));
+      'http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=' + encodeURIComponent($(this).find('a').text()));
   });
 });
 </script>
@@ -255,6 +294,24 @@ $(function() {
   </div>
 </form>
 
+<form id="delete-deck" class="ui small modal" action="/delete-deck?deck={{$.Deck.Deck.NormalizedName}}" method="post">
+  <div class="header">
+    Are You Sure?
+  </div>
+  <div class="content">
+    <div class="image">
+      <i class="red warning icon"></i>
+    </div>
+    <div class="description">
+      Are you sure you want to delete {{$.Deck.Deck.Name}}?
+    </div>
+  </div>
+  <div class="actions">
+    <input type="submit" name="sign-in" value="Delete {{$.Deck.Deck.Name}}" class="ui red button" />
+    <div class="ui button">Cancel</div>
+  </div>
+</form>
+
 <form id="update-decklist" class="ui modal" action="/update-decklist" method="post">
   <input type="hidden" name="deck" value="{{$.Deck.Deck.Name}}">
   <div class="header">
@@ -279,6 +336,12 @@ $(function() {
           <textarea name="sideboard">{{.SideboardDump}}</textarea>
         </div>
       </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" name="grandfather">
+            <label>This decklist is legal regardless of price (grandfathered in from an older system).</label>
+          </div>
+        </div>
     </div>
     {{end}}
   </div>

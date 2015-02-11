@@ -7,7 +7,9 @@
       <div class="sub header">Snapshot: {{$.Snapshot.PrettyDate}}</div>
     </h1>
     <div class="ui bottom attached segment">
-      <h3 class="ui header">Total Price: {{$.Snapshot.TotalPrice.String}}</h3>
+      <h3 class="ui {{if $.IsLegal}}green{{else}}red{{end}} header">
+        Total Price: {{$.Snapshot.TotalPrice.String}}{{if $.Snapshot.IsGrandfatherLegal}} (grandfathered in){{else if $.IsLegal}} (legal){{else}} (not legal){{end}}
+      </h3>
     </div>
     
     <h2 class="ui header">Decklist ({{$.Snapshot.TotalDecklistCount}} cards)</h2>

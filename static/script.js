@@ -5,7 +5,7 @@ $(function() {
   $('.tabular.menu .item').tab();
 
   // highlight table rows with mouseover using the warning color
-   $('table tbody tr').hover(function() {               
+   $('table tr').hover(function() {               
       $(this).addClass('warning');  
    }, function() {  
       $(this).removeClass('warning');  
@@ -19,5 +19,8 @@ $(function() {
     } else {
       hasSubmitted = true;
     }
+  });
+  $('input').on('input', function(e) {
+      hasSubmitted = false;
   });
 });

@@ -66,6 +66,7 @@ func SetupRenderer(db *Db, r *mux.Router) {
 	s.HandleFunc("/delete-user", createHandler(db, store, performDeleteUser))
 	s.HandleFunc("/add-deck", createHandler(db, store, performAddDeck))
 	s.HandleFunc("/modify-deck", createHandler(db, store, performModifyDeck))
+	s.HandleFunc("/delete-deck", createHandler(db, store, performDeleteDeck))
 	s.HandleFunc("/update-decklist", createHandler(db, store, performUpdateDecklist))
 	s.HandleFunc("/save-snapshot", createHandler(db, store, performSaveSnapshot))
 	s.HandleFunc("/revert-changes", createHandler(db, store, performRevertChanges))
@@ -151,10 +152,10 @@ func renderTemplate(name string, w io.Writer, data interface{}) error {
 	}
 }
 
-func redirectForError(w http.ResponseWriter, r *http.Request, store *sessions.CookieStore, err error) {
+func redirectForError(w http.ResponseWriter, r *http.Request, store *sessions.CookieStore, err error, page string) {
 	// for our error page, we're just going to use the main filter page with an error info text blob
 	setCookie(w, r, store, "error", err.Error())
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, page, http.StatusFound)
 }
 
 func createHandler(
@@ -163,7 +164,7 @@ func createHandler(
 	f func(http.ResponseWriter, *http.Request, *Db, *sessions.CookieStore) error) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r, db, store); err != nil {
-			redirectForError(w, r, store, err)
+			redirectForError(w, r, store, err, "/")
 		}
 	}
 }
@@ -350,6 +351,7 @@ func renderSnapshotPage(w http.ResponseWriter, r *http.Request, db *Db, store *s
 		templateData
 		Deck     *deckData
 		Snapshot *Snapshot
+		IsLegal  bool
 	}{
 		templateData: *getStandardTemplateData(w, r, db, store),
 	}
@@ -381,6 +383,7 @@ func renderSnapshotPage(w http.ResponseWriter, r *http.Request, db *Db, store *s
 
 	data.Deck = &deckData{d, u}
 	data.Snapshot = snaps[snapIdxInt]
+	data.IsLegal = d.IsSnapshotLegal(data.Snapshot)
 	return renderTemplate("snapshot.template", w, &data)
 }
 
@@ -579,11 +582,47 @@ func performModifyDeck(w http.ResponseWriter, r *http.Request, db *Db, store *se
 	return nil
 }
 
+func performDeleteDeck(w http.ResponseWriter, r *http.Request, db *Db, store *sessions.CookieStore) error {
+	deckName := r.FormValue("deck")
+
+	if deckName == "" {
+		return errors.New("Deck name not included")
+	}
+
+	user, err := findLoggedInUser(w, r, db, store)
+	if err != nil {
+		return err
+	}
+
+	deck := user.FindDeck(deckName)
+	if deck == nil {
+		return errors.New("Deck '" + deckName + "' doesn't exist!")
+	}
+
+	newDecks := []*Deck{}
+	for _, d := range user.Decks {
+		if d != deck {
+			newDecks = append(newDecks, d)
+		}
+	}
+
+	user.Decks = newDecks
+	err = db.UpdateUser(user)
+	if err != nil {
+		return err
+	}
+
+	setCookie(w, r, store, "message", "Deck '"+deck.Name+"' deleted successfully!")
+	http.Redirect(w, r, "/", http.StatusFound)
+	return nil
+}
+
 func performUpdateDecklist(w http.ResponseWriter, r *http.Request, db *Db, store *sessions.CookieStore) error {
 	deckName := r.FormValue("deck")
 	commander := r.FormValue("commander")
 	decklist := r.FormValue("decklist")
 	sideboard := r.FormValue("sideboard")
+	grandfather := r.FormValue("grandfather")
 
 	if deckName == "" {
 		return errors.New("Deck name not included")
@@ -609,10 +648,14 @@ func performUpdateDecklist(w http.ResponseWriter, r *http.Request, db *Db, store
 
 	deck.StagingArea.Decklist = ParseCardEntryLines(decklist)
 	deck.StagingArea.Sideboard = ParseCardEntryLines(sideboard)
+	deck.StagingArea.IsGrandfatherLegal = (grandfather != "")
 
-	err = deck.StagingArea.CalculatePrices()
+	deckUrl := "/deck?user=" + user.NormalizedName() + "&name=" + deck.NormalizedName()
+	err = deck.StagingArea.CalculatePrices(db)
 	if err != nil {
-		return err
+		// this is not a fatal error - we need to redirect back to the expected page
+		redirectForError(w, r, store, err, deckUrl)
+		return nil
 	}
 
 	err = db.UpdateUser(user)
@@ -620,7 +663,7 @@ func performUpdateDecklist(w http.ResponseWriter, r *http.Request, db *Db, store
 		return err
 	}
 
-	http.Redirect(w, r, "/deck?user="+user.NormalizedName()+"&name="+deck.NormalizedName(), http.StatusFound)
+	http.Redirect(w, r, deckUrl, http.StatusFound)
 	return nil
 }
 
@@ -655,7 +698,7 @@ func performSaveSnapshot(w http.ResponseWriter, r *http.Request, db *Db, store *
 }
 
 func performRevertChanges(w http.ResponseWriter, r *http.Request, db *Db, store *sessions.CookieStore) error {
-	deckName := r.FormValue("Deck")
+	deckName := r.FormValue("deck")
 
 	if deckName == "" {
 		return errors.New("Deck name not included")

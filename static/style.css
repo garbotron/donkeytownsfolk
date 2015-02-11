@@ -21,3 +21,24 @@ h3.ui.sub-banner {
   color: #666;
   margin-top: 0;
 }
+
+.ui.deck.table thead tr th {
+  padding: .4em .6em;
+}
+
+.ui.deck.table thead tr td {
+  border-top-width: 0px;
+}
+
+.ui.deck.table tbody tr td {
+  padding: .2em .6em;
+  border-top-width: 0px;
+}
+
+.ui.deck.table tbody tr:first-child td {
+  padding-top: .6em;
+}
+
+.ui.deck.table tbody tr:last-child td {
+  padding-bottom: .6em;
+}

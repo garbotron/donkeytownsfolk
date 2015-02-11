@@ -37,10 +37,11 @@ type (
 	}
 
 	Snapshot struct {
-		Date      time.Time
-		Decklist  []*CardEntry
-		Sideboard []*CardEntry
-		Commander CommanderEntry
+		Date               time.Time
+		Decklist           []*CardEntry
+		Sideboard          []*CardEntry
+		Commander          CommanderEntry
+		IsGrandfatherLegal bool
 	}
 
 	CardEntry struct {
@@ -54,14 +55,27 @@ type (
 		Price     Money
 		IsPresent bool
 	}
+
+	PriceDbEntry struct {
+		ID    string // Lower case name without any non-alphanumeric characters
+		Name  string
+		Price Money
+	}
+
+	ScraperStats struct {
+		LastPriceUpdate      time.Time
+		LastPriceUpdateError error
+	}
 )
 
 const (
-	MongoServerAddress             = "127.0.0.1"
-	MongoDbName                    = "donkeytownsfolk"
-	MongoUsersCollectionName       = "users"
-	Free                     Money = 0
-	NoMoney                  Money = -1
+	MongoServerAddress                    = "127.0.0.1"
+	MongoDbName                           = "donkeytownsfolk"
+	MongoUsersCollectionName              = "users"
+	MongoPricesCollectionName             = "prices"
+	MongoScraperStatsCollectionName       = "scraperstats"
+	Free                            Money = 0
+	NoMoney                         Money = -1
 )
 
 var (
@@ -110,7 +124,29 @@ func OpenDb() (*Db, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c := db.DB(MongoDbName).C(MongoPricesCollectionName)
+	c.EnsureIndexKey("id")
+
 	return &Db{db}, nil
+}
+
+func (db *Db) GetScraperStats() (*ScraperStats, error) {
+	c := db.db.DB(MongoDbName).C(MongoScraperStatsCollectionName)
+	s := ScraperStats{}
+	err := c.Find(nil).One(&s)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (db *Db) SetScraperStats(s *ScraperStats) error {
+	c := db.db.DB(MongoDbName).C(MongoScraperStatsCollectionName)
+	if _, err := c.RemoveAll(nil); err != nil {
+		return err
+	}
+	return c.Insert(s)
 }
 
 func (user *User) NormalizedName() string {
@@ -180,13 +216,44 @@ func (d *Deck) CurrentPriceSnapshot() *Snapshot {
 	return bestSnap
 }
 
+func (d *Deck) IsGrandfatherLegal() bool {
+	s := d.CurrentPriceSnapshot()
+	return s != nil && s.IsGrandfatherLegal
+}
+
+func (d *Deck) IsSnapshotLegal(s *Snapshot) bool {
+	return s != nil && (s.IsGrandfatherLegal || (s.TotalPrice() <= d.PriceLimit))
+}
+
 func (d *Deck) IsLegal() bool {
-	snap := d.CurrentPriceSnapshot()
-	return snap != nil && snap.TotalPrice() <= d.PriceLimit
+	return d.IsSnapshotLegal(d.CurrentPriceSnapshot())
 }
 
 func (d *Deck) IsStagingAreaLegal() bool {
-	return d.StagingArea.TotalPrice() <= d.PriceLimit
+	return d.IsSnapshotLegal(&d.StagingArea)
+}
+
+func (db *Db) NameAndPrice(id string) (string, Money, error) {
+	c := db.db.DB(MongoDbName).C(MongoPricesCollectionName)
+	e := PriceDbEntry{}
+	err := c.Find(bson.M{"id": id}).One(&e)
+	if err != nil {
+		return "", NoMoney, err
+	}
+	return e.Name, e.Price, nil
+}
+
+func (db *Db) UpdateAllPrices(prices []*PriceDbEntry) error {
+	ins := make([]interface{}, len(prices))
+	for i := 0; i < len(prices); i++ {
+		ins[i] = prices[i]
+	}
+
+	c := db.db.DB(MongoDbName).C(MongoPricesCollectionName)
+	if _, err := c.RemoveAll(nil); err != nil {
+		return err
+	}
+	return c.Insert(ins...)
 }
 
 func (db *Db) AllUsers() ([]*User, error) {
@@ -286,6 +353,7 @@ func (s *Snapshot) Clone() *Snapshot {
 	ret := &Snapshot{}
 	ret.Date = s.Date
 	ret.Commander = s.Commander
+	ret.IsGrandfatherLegal = s.IsGrandfatherLegal
 
 	ret.Decklist = make([]*CardEntry, len(s.Decklist), len(s.Decklist))
 	for i := 0; i < len(s.Decklist); i++ {
