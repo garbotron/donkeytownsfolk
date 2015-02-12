@@ -198,8 +198,10 @@
 <script type="text/javascript" src="/static/jquery.tablesort.js"></script>
 <script type="text/javascript">
 $(function() {
-  $('.sortable.table').tablesort();
-  $('.sortable.table').data('tablesort').sort($('.sortable.table th:nth-child(2)'), 'asc');
+  {{if or $.Deck.Deck.StagingArea.TotalDecklistCount $.Deck.Deck.StagingArea.TotalSideboardCount}}
+    $('.sortable.table').tablesort();
+    $('.sortable.table').data('tablesort').sort($('.sortable.table th:nth-child(2)'), 'asc');
+  {{end}}
 
   $('#delete-deck-link').click(function() { $('#delete-deck').modal('show'); return false; });
 
