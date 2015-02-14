@@ -188,7 +188,7 @@ func getFilterResults(w http.ResponseWriter, r *http.Request, db *Db, store *ses
 		}
 	}
 
-	priceLimit := NoMoney
+	priceLimit := Free
 	if p := r.FormValue("price"); p != "" {
 		if pp, err := strconv.Atoi(p); err == nil {
 			priceLimit = Money(pp)
@@ -198,7 +198,7 @@ func getFilterResults(w http.ResponseWriter, r *http.Request, db *Db, store *ses
 	for _, u := range allUsers {
 		for _, d := range u.AllDecks() {
 			// exclude the deck if it doesn't match the price requirement
-			if priceLimit != NoMoney && d.PriceLimit != priceLimit {
+			if priceLimit != Free && d.PriceLimit != priceLimit {
 				continue
 			}
 
@@ -651,12 +651,7 @@ func performUpdateDecklist(w http.ResponseWriter, r *http.Request, db *Db, store
 	deck.StagingArea.IsGrandfatherLegal = (grandfather != "")
 
 	deckUrl := "/deck?user=" + user.NormalizedName() + "&name=" + deck.NormalizedName()
-	err = deck.StagingArea.CalculatePrices(db)
-	if err != nil {
-		// this is not a fatal error - we need to redirect back to the expected page
-		redirectForError(w, r, store, err, deckUrl)
-		return nil
-	}
+	deck.StagingArea.CalculatePrices(db)
 
 	err = db.UpdateUser(user)
 	if err != nil {

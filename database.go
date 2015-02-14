@@ -48,12 +48,14 @@ type (
 		Name     string
 		Count    int
 		PricePer Money
+		NotFound bool
 	}
 
 	CommanderEntry struct {
 		Name      string
 		Price     Money
 		IsPresent bool
+		NotFound  bool
 	}
 
 	PriceDbEntry struct {
@@ -75,7 +77,6 @@ const (
 	MongoPricesCollectionName             = "prices"
 	MongoScraperStatsCollectionName       = "scraperstats"
 	Free                            Money = 0
-	NoMoney                         Money = -1
 )
 
 var (
@@ -222,6 +223,20 @@ func (d *Deck) IsGrandfatherLegal() bool {
 }
 
 func (d *Deck) IsSnapshotLegal(s *Snapshot) bool {
+	if s.Commander.IsPresent && s.Commander.NotFound {
+		return false
+	}
+	for _, c := range s.Decklist {
+		if c.NotFound {
+			return false
+		}
+	}
+	for _, c := range s.Sideboard {
+		if c.NotFound {
+			return false
+		}
+	}
+
 	return s != nil && (s.IsGrandfatherLegal || (s.TotalPrice() <= d.PriceLimit))
 }
 
@@ -238,7 +253,7 @@ func (db *Db) NameAndPrice(id string) (string, Money, error) {
 	e := PriceDbEntry{}
 	err := c.Find(bson.M{"id": id}).One(&e)
 	if err != nil {
-		return "", NoMoney, err
+		return "", Free, err
 	}
 	return e.Name, e.Price, nil
 }
@@ -306,6 +321,10 @@ func (db *Db) UpdateUser(user *User) error {
 
 func (m Money) String() string {
 	return fmt.Sprintf("$%.2f", m)
+}
+
+func (m Money) SortableString() string {
+	return fmt.Sprintf("%07.2f", m)
 }
 
 func (m Money) SimpleString() string {

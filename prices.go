@@ -2,7 +2,6 @@ package donkeytownsfolk
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"math/rand"
@@ -49,6 +48,10 @@ func (db *Db) scrapePrices() error {
 		prefix := "/db/search_result.asp?set_name="
 		val, exists := s.Attr("href")
 		if exists && strings.HasPrefix(strings.ToLower(val), prefix) {
+			if strings.HasSuffix(val, "Magic 2010") {
+				// I have no idea why, but the link for M10 is wrong...
+				val += " (M10)"
+			}
 			setLinks = append(setLinks, "http://magic.tcgplayer.com"+val)
 		}
 	})
@@ -154,51 +157,38 @@ func nameToId(name string) string {
 }
 
 // calculates all of the prices for each card
-func (s *Snapshot) CalculatePrices(db *Db) error {
+func (s *Snapshot) CalculatePrices(db *Db) {
 	if s.Commander.IsPresent {
-		n, p, err := calculateNameAndPrice(db, s.Commander.Name)
-		if err != nil {
-			return err
-		}
+		n, p, exists := calculateNameAndPrice(db, s.Commander.Name)
 		s.Commander.Name = n
 		s.Commander.Price = p
+		s.Commander.NotFound = !exists
 	}
 	for _, c := range s.Decklist {
-		err := c.calculateNameAndPrice(db)
-		if err != nil {
-			return err
-		}
+		c.calculateNameAndPrice(db)
 	}
 	for _, c := range s.Sideboard {
-		err := c.calculateNameAndPrice(db)
-		if err != nil {
-			return err
-		}
+		c.calculateNameAndPrice(db)
 	}
-	return nil
 }
 
-func (c *CardEntry) calculateNameAndPrice(db *Db) error {
-	var err error
-	n, p, err := calculateNameAndPrice(db, c.Name)
-	if err != nil {
-		return err
-	}
+func (c *CardEntry) calculateNameAndPrice(db *Db) {
+	n, p, exists := calculateNameAndPrice(db, c.Name)
 	c.Name = n
 	c.PricePer = p
-	return nil
+	c.NotFound = !exists
 }
 
-func calculateNameAndPrice(db *Db, origName string) (string, Money, error) {
+func calculateNameAndPrice(db *Db, origName string) (string, Money, bool) {
 	id := nameToId(origName)
 	for _, x := range freeCards {
 		if id == nameToId(x) {
-			return x, Free, nil
+			return x, Free, true
 		}
 	}
 	n, p, err := db.NameAndPrice(id)
 	if err != nil {
-		return "", NoMoney, errors.New(fmt.Sprintf("Could not find card: %s", origName))
+		return origName, Free, false
 	}
-	return n, p, nil
+	return n, p, true
 }
