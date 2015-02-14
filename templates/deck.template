@@ -91,7 +91,7 @@
                   {{if .Commander.IsPresent}}
                   <tr class="card-deck-entry">
                     <td></td>
-                    <td><strong>Commander: <a class="card-deck-entry" href="http://magiccards.info/query?q=%21{{.Commander.Name}}&amp;v=card&amp;s=cname">{{.Commander.Name}}</a>{{if .Commander.NotFound}} &lt;<i class="red warning sign icon"></i>NOT FOUND&gt;{{end}}</strong></td>
+                    <td><strong>Commander: <a class="card-deck-entry" href="http://magiccards.info/query?q=%21{{.Commander.Name}}&amp;v=card&amp;s=cname">{{.Commander.Name}}</a>{{if .Commander.NotFound}} <span class="ui red horizontal label"><i class="warning sign icon"></i> NOT FOUND</span>{{end}}</strong></td>
                     <td class="collapsing">{{.Commander.Price.String}}</td>
                     <td class="collapsing">{{.Commander.Price.String}}</td>
                   </tr>
@@ -101,7 +101,7 @@
                   {{range $entry := .Decklist}}
                   <tr class="card-deck-entry">
                     <td class="collapsing">{{$entry.Count}}</td>
-                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a>{{if $entry.NotFound}} &lt;<i class="red warning sign icon"></i>NOT FOUND&gt;{{end}}</td>
+                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a>{{if $entry.NotFound}} <span class="ui red horizontal label"><i class="warning sign icon"></i> NOT FOUND</span>{{end}}</td>
                     <td class="collapsing" data-sort-value="{{$entry.PricePer.SortableString}}">{{$entry.PricePer.String}}</td>
                     <td class="collapsing" data-sort-value="{{$entry.TotalPrice.SortableString}}">{{$entry.TotalPrice.String}}</td>
                   </tr>
@@ -141,7 +141,7 @@
                   {{range $entry := .Sideboard}}
                   <tr class="card-sb-entry">
                     <td class="collapsing">{{$entry.Count}}</td>
-                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a>{{if $entry.NotFound}} &lt;<i class="red warning sign icon"></i>NOT FOUND&gt;{{end}}</td>
+                    <td data-sort-value="{{$entry.Name}}"><a href="http://magiccards.info/query?q=%21{{$entry.Name}}&amp;v=card&amp;s=cname">{{$entry.Name}}</a>{{if $entry.NotFound}} <span class="ui red horizontal label"><i class="warning sign icon"></i> NOT FOUND</span>{{end}}</td>
                     <td class="collapsing" data-sort-value="{{$entry.PricePer.SortableString}}">{{$entry.PricePer.String}}</td>
                     <td class="collapsing" data-sort-value="{{$entry.PricePer.SortableString}}">{{$entry.TotalPrice.String}}</td>
                   </tr>
