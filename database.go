@@ -368,6 +368,17 @@ func (s *Snapshot) TotalSideboardCount() int {
 	return ret
 }
 
+func (s *Snapshot) AllCardsSorted() []*CardEntry {
+	cards := cards{}
+	if s.Commander.IsPresent {
+		cards = append(cards, &CardEntry{s.Commander.Name, 1, s.Commander.Price, s.Commander.NotFound})
+	}
+	cards = append(cards, s.Decklist...)
+	cards = append(cards, s.Sideboard...)
+	sort.Sort(cards)
+	return cards
+}
+
 func (s *Snapshot) Clone() *Snapshot {
 	ret := &Snapshot{}
 	ret.Date = s.Date
@@ -450,5 +461,19 @@ func (d decks) Swap(i, j int) {
 }
 
 func (d decks) Less(i, j int) bool {
-	return d[i].Name < d[i].Name
+	return d[i].Name < d[j].Name
+}
+
+type cards []*CardEntry
+
+func (c cards) Len() int {
+	return len(c)
+}
+
+func (c cards) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
+func (c cards) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
 }

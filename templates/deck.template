@@ -60,17 +60,21 @@
         {{if $.Deck.Deck.Snapshots | len}}
         <a href="/revert-changes?deck={{$.Deck.Deck.NormalizedName}}" class="ui right floated compact button">
           <i class="arrow circle left icon"></i>
-          Revert Changes
+          Revert
+        </a>
+        <a id="diff-link" class="ui right floated compact button">
+          <i class="copy icon"></i>
+          Diff
         </a>
         {{end}}
         <a href="/save-snapshot?deck={{$.Deck.Deck.NormalizedName}}" class="ui right floated compact button">
           <i class="save icon"></i>
-          Save Snapshot
+          Save
         </a>
         {{end}}
         <a id="update-decklist-link" class="ui right floated compact button">
           <i class="edit icon"></i>
-          Update Decklist
+          Update
         </a>
         {{end}}
       </h2>
@@ -79,7 +83,6 @@
         <div class="ui equal height grid">
           <div class="row">
             <div class="eleven wide column">
-
               <table class="ui very compact sortable deck table">
                 <thead>
                   <tr>
@@ -108,7 +111,6 @@
                   {{end}}
                 </tbody>
               </table>
-
             </div>
             <div class="five wide column">
               <img id="img-card-deck" class="ui centered image" style="width:200px" src="http://gatherer.wizards.com/Handlers/Image.ashx?type=card&amp;name=invalid">
@@ -127,7 +129,6 @@
         <div class="ui equal height grid">
           <div class="row">
             <div class="eleven wide column">
-            
               <table class="ui very compact sortable deck table">
                 <thead>
                   <tr>
@@ -148,7 +149,6 @@
                   {{end}}
                 </tbody>
               </table>
-
             </div>
             <div class="five wide column">
               <img id="img-card-sb" class="ui centered image" src="http://gatherer.wizards.com/Handlers/Image.ashx?type=card&amp;name=invalid">
@@ -248,6 +248,11 @@ $(function() {
         }
       })
       .modal('show'); 
+    return false;
+  });
+
+  $('#diff-link').click(function() { 
+    $('#diff-popup').modal('show'); 
     return false;
   });
 
@@ -371,5 +376,22 @@ $(function() {
     <div class="ui button">Cancel</div>
   </div>
 </form>
+
+<div id="diff-popup" class="ui small modal">
+  <i class="close icon"></i>
+  <div class="header">
+    Decklist Diff
+  </div>
+  <div class="content">
+    <table class="ui very compact table">
+      {{range $entry := $.DiffEntries}}
+      <tr class="{{if $entry.Added}}positive{{else}}negative{{end}}">
+        <td>{{$entry.Name}}</td>
+        <td>{{$entry.Description}}</td>
+      </tr>
+      {{end}}
+    </table>
+  </div>
+</div>
 
 {{template "footer.template" $}}

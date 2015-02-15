@@ -22,6 +22,9 @@
           <td><a href="/?price={{$deck.Deck.PriceLimit.SimpleString}}">{{$deck.Deck.PriceLimit.String}}</a></td>
           {{with $deck.Deck.CurrentPriceSnapshot}}
           <td class="{{if $deck.Deck.IsLegal}}positive{{else}}negative{{end}}">
+            {{if $deck.Deck.IsSaved | not}}
+              <i title="This deck has changes in progress." class="black edit icon"></i>
+            {{end}}
             {{if $deck.Deck.IsLegal}}
               <i class="checkmark icon"></i>
             {{else}}

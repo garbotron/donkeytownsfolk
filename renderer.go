@@ -18,25 +18,32 @@ import (
 	"time"
 )
 
-type templateData struct {
-	User         *User
-	Subtitle     string
-	InfoMessage  string
-	ErrorMessage string
-	SearchText   string
-}
+type (
+	templateData struct {
+		User         *User
+		Subtitle     string
+		InfoMessage  string
+		ErrorMessage string
+		SearchText   string
+	}
 
-type deckData struct {
-	Deck *Deck
-	User *User
-}
+	deckData struct {
+		Deck *Deck
+		User *User
+	}
 
-type filterResult struct {
-	AllDecks     []*deckData
-	CurrentDecks []*deckData
-	CurrentPage  int
-	NumPages     int
-}
+	filterResult struct {
+		AllDecks     []*deckData
+		CurrentDecks []*deckData
+		CurrentPage  int
+		NumPages     int
+	}
+
+	diffEntry struct {
+		Name  string
+		Count int
+	}
+)
 
 const (
 	sessionName          = "session"
@@ -313,11 +320,64 @@ func renderFilterPage(w http.ResponseWriter, r *http.Request, db *Db, store *ses
 	return nil
 }
 
+func (d *diffEntry) Added() bool {
+	return (d.Count > 0)
+}
+
+func (d *diffEntry) Description() string {
+	if d.Count > 0 {
+		return fmt.Sprintf("%d added", d.Count)
+	} else {
+		return fmt.Sprintf("%d removed", -d.Count)
+	}
+}
+
+func diffSnapshots(before *Snapshot, after *Snapshot) []*diffEntry {
+	ret := []*diffEntry{}
+
+	bc := before.AllCardsSorted()
+	ac := after.AllCardsSorted()
+
+	bi := 0
+	ai := 0
+
+	for bi < len(bc) || ai < len(ac) {
+		if ai >= len(ac) {
+			// we ran off the end of the "after" list, meaning there are more entries to remove from "before"
+			ret = append(ret, &diffEntry{bc[bi].Name, -bc[bi].Count})
+			bi++
+		} else if bi >= len(bc) {
+			// we ran off the end of the "before" list, meaning there are more entries to add from "after"
+			ret = append(ret, &diffEntry{ac[ai].Name, ac[ai].Count})
+			ai++
+		} else {
+			// there are more entries to handle in both lists
+			if bc[bi].Name == ac[ai].Name {
+				// this entry exists in both lists, check the counts
+				if bc[bi].Count != ac[ai].Count {
+					ret = append(ret, &diffEntry{ac[ai].Name, ac[ai].Count - bc[bi].Count})
+				}
+				bi++
+				ai++
+			} else if bc[bi].Name < ac[ai].Name {
+				ret = append(ret, &diffEntry{bc[bi].Name, -bc[bi].Count})
+				bi++
+			} else {
+				ret = append(ret, &diffEntry{ac[ai].Name, ac[ai].Count})
+				ai++
+			}
+		}
+	}
+
+	return ret
+}
+
 func renderDeckPage(w http.ResponseWriter, r *http.Request, db *Db, store *sessions.CookieStore) error {
 	data := struct {
 		templateData
 		Deck           *deckData
 		IsLoggedInUser bool
+		DiffEntries    []*diffEntry
 	}{
 		templateData: *getStandardTemplateData(w, r, db, store),
 	}
@@ -342,6 +402,9 @@ func renderDeckPage(w http.ResponseWriter, r *http.Request, db *Db, store *sessi
 	data.Deck = &deckData{d, u}
 	data.Subtitle = data.Deck.Deck.Name
 	data.IsLoggedInUser = (data.User != nil && u.Name == data.User.Name)
+	if len(d.Snapshots) != 0 {
+		data.DiffEntries = diffSnapshots(d.Snapshots[len(d.Snapshots)-1], &d.StagingArea)
+	}
 
 	return renderTemplate("deck.template", w, &data)
 }
@@ -360,8 +423,8 @@ func renderSnapshotPage(w http.ResponseWriter, r *http.Request, db *Db, store *s
 	deckName := r.FormValue("deck")
 	snapIdx := r.FormValue("idx")
 
-	if deckName == "" || snapIdx == "" {
-		return errors.New("Deck name / snapshot index not included")
+	if username == "" || deckName == "" || snapIdx == "" {
+		return errors.New("Username / deck name / snapshot index not included")
 	}
 
 	u, err := db.FindUser(username)
