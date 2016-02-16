@@ -2,12 +2,12 @@ package donkeytownsfolk
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/bcrypt"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
+	"golang.org/x/crypto/bcrypt"
 	"html/template"
 	"io"
 	"net/http"
